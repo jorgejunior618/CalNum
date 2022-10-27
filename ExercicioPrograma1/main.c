@@ -450,7 +450,7 @@ void exibeVetor(double* vet, int n) {
 
     printf("\n Seu vetor de solucoes:\n");
     for (i = 0; i < n; i++) {
-        printf(" sol[%d] = %10.3lf;\n", i, vet[i]);
+        printf(" sol[%d] = %10.3lf;\n", i + 1, vet[i]);
     }
 }
 
