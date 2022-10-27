@@ -1,6 +1,7 @@
 # depslib dependency file v1.0
-1666547966 source:d:\pessoais\ifce\aulas online\5º semestre\calnum\exercicioprograma1\main.c
+1666842692 source:d:\pessoais\ifce\aulas online\5º semestre\calnum\exercicioprograma1\main.c
 	<stdio.h>
 	<stdlib.h>
+	<windows.h>
 	<math.h>
 

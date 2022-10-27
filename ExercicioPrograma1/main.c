@@ -4,48 +4,62 @@
 #include <math.h>
 
 #define EPSILON 0.000001
+#define MAX_CASAS_DECIMAIS 20
 
-int main(void)
-{
-    char menuPrincipal();
-    void conversaoNumerica();
-    void sistemaLinear();
-    void equacaoAlgebrica();
+void limpaTela();
+// Funcoes de Menu
+char menuPrincipal();
+void menuConversaoNumerica();
+void menuSistemaLinear();
+void menuEquacaoAlgebrica();
 
-    double** criaMatriz(double linhas, double colunas);
-    void preencheMatriz(double** mat, int lin, int col);
-    void exibeMatriz(double** mat, int lin, int col);
-    void exibeVetor(double* vet, int n);
-    int substituicaoRetroativa(double** mat, int n, double* sol);
-    void gauss(double** mat, int n);
+// Funcoes da Conversao Numerica
+void converteParteInteira(long int, int);
+void converteParteFracionaria(double, int);
+void converter();
+// Fim da Conversao Numerica
 
-    char opcao;
-    // int n, tipo;
-    // double **matriz, *solucao;
+// funcoes da resolucao de Sistema Linear
+void jordan(double** mat, int* posicaoVariaveis, int n);
+void trocaColunas(double** matriz, int* posicaoVariaveis, int qtdVariaveis, int col1, int col2);int solucionaMatrizDiagonal(double** matriz, double* solucao, int* posicaoVariaveis, int qtdVariaveis);
+void sistemaLinear();
+// fim Sistema Linear
+
+// Funcoes de Equacao Algebrica
+// Fim Equacao Algebrica
+
+// Funcoes gerais
+double** criaMatriz(double linhas, double colunas);
+void preencheMatriz(double** mat, int lin, int col);
+void exibeMatriz(double** mat, int lin, int col);
+void exibeVetor(double* vet, int n);
+int substituicaoRetroativa(double** mat, int n, double* sol);
+void gauss(double** mat, int n);
+
+int main(void) {
+    char opcao; // Variavel que recebe qual opcao sera executada
 
     while (1) {
-        system("cls");
+        limpaTela();
         opcao = menuPrincipal();
 
         switch (opcao) {
             case 'C':
-                system("cls");
-                conversaoNumerica();
+                limpaTela();
+                menuConversaoNumerica();
                 break;
             case 'S':
-                system("cls");
-                sistemaLinear();
-                Sleep(3000);
+                limpaTela();
+                menuSistemaLinear();
                 break;
             case 'E':
-                system("cls");
-                equacaoAlgebrica();
-                Sleep(3000);
+                limpaTela();
+                menuEquacaoAlgebrica();
                 break;
             case 'F':
                 return 0;
             default:
-                system("cls");
+                limpaTela();
                 printf(" ********************************************\n");
                 printf(" * POR FAVOR SELECIONE UMA OPCAO VALIDA\n\n\n");
                 Sleep(3000);
@@ -55,22 +69,28 @@ int main(void)
     return 0;
 }
 
+void limpaTela()  {
+    if(system("clear")) { // se o SO nao for Unix (linux ou MacOS) devolve o cod. de erro 1
+        system("cls"); // utliza o comando de limpar a tela correto
+    }
+}
+
 /** MENU PRINCIPAL */
 char menuPrincipal() {
     char op;
 
-    printf(" ********************************************\n");
-    printf(" *              MENU PRINCIPAL              *\n");
-    printf(" ********************************************\n");
+    printf(" ****************************************************************************************\n");
+    printf(" *                                    MENU PRINCIPAL                                    *\n");
+    printf(" ****************************************************************************************\n");
 
     printf("\n Selecione a opcao que deseja realizar:\n");
-    printf("\n 'C' - Conversao");
+    printf("\n 'C' - Conversao Numerica");
     printf("\n 'S' - Sistema Linear");
     printf("\n 'E' - Equacao Algebrica");
     printf("\n 'F' - Finalizar\n");
     printf("\n Digite uma opcao: ");
 
-    fflush(stdin);
+    fflush(stdin); // Limpeza de Buffer de teclado evita que o proximo input seja preenchido acidentalmente
     op = getchar();
     fflush(stdin);
 
@@ -80,47 +100,283 @@ char menuPrincipal() {
 
     return op;
 }
+/** FIM MENU PRINCIPAL */
 
+/** FUNCOES PARA CONVERSAO NUMERICA */
+void converteParteInteira(long int numParteInteira, int base) {
+    // Converte o numero inteiro <numParteInteira> para a base <base>
+    // E imprime o resultado da conversao inteira
 
-void conversaoNumerica() {
-    double decimal;
+    if(numParteInteira == 0) { // retornando a pilha de recursao
+        return;
+    }
 
-    char intBinario[20] = "0";
-    char fracBinario[20] = "0";
+    int resto = numParteInteira % base;
+    converteParteInteira(numParteInteira / base, base);
 
-    char intOctal[10] = "0";
-    char fracOctal[20] = "0";
+    if(resto < 10) {
+        printf("%d", resto);
+    } else { // Imprimindo os digitos representados por letras
+        printf("%c", resto - 10 + 'A' );
+    }
+}// Fim converteParteInteira()
 
-    char intHex[10] = "0";
-    char fracHex[20] = "0";
+void converteParteFracionaria(double numParteFracionaria, int base) {
+    // Converte a parte fracionaria do numero <numParteFracionaria> para a base <base>
+    // E imprime apenas os digitos da parte fracionaria da conversao
 
-    printf(" ********************************************\n");
-    printf(" *            CONVERSAO NUMERICA            *\n");
-    printf(" ********************************************\n");
+    double produto = numParteFracionaria * base;
+    int parteInteiraProduto = produto, casaDecimalAtual = 1;
 
-    printf("\n Digite o numero que deseja converter: ");
+    numParteFracionaria = produto - parteInteiraProduto;
 
+    if(parteInteiraProduto < 10) {
+        printf("%d", parteInteiraProduto);
+    } else { // Imprimindo os digitos representados por letras
+        printf("%c", parteInteiraProduto - 10 + 'A' );
+    }
+
+    if(numParteFracionaria == 0 || casaDecimalAtual == MAX_CASAS_DECIMAIS) {
+        casaDecimalAtual = 1;
+        return;
+    } else {
+        ++casaDecimalAtual;
+        converteParteFracionaria(numParteFracionaria, base);
+    }
+} // Fim converteParteFracionaria
+
+void converter() {
+    int i;
+    long int numParteInteira;
+    double numParteFracionaria, numDecimal;
+
+    // Array que define as bases disponíveis para conversão.
+    int bases[4] = { 2, 8, 16 };
+
+    printf(" Insira um numero decimal: ");
     fflush(stdin);
-    scanf(" %lf", &decimal);
+    scanf("%lf", &numDecimal);
     fflush(stdin);
 
-    printf("\n * Numero digitado: %lf \n\n", decimal);
-    printf(" Binario:     %s.%s\n", intBinario, fracBinario);
-    printf(" Octal:       %s.%s\n", intOctal, fracOctal);
-    printf(" Hexadecimal: %s.%s\n", intHex, fracHex);
+    numParteInteira = (long int) numDecimal; // retirando a parte fracionaria
+    numParteFracionaria = numDecimal - numParteInteira; // mantendo somente a parte fracionaria
+
+    printf(" Base 10: %lf\n", numDecimal);
+
+    // Itera sobre o array de bases numericas
+    for(i = 0; i < 3; ++i) {
+        printf(" Base %2d: ", bases[i]);
+        converteParteInteira(numParteInteira, bases[i]);
+        printf(".");
+        converteParteFracionaria(numParteFracionaria, bases[i]);
+        printf("\n");
+    }
+}// Fim converter
+
+void menuConversaoNumerica() {
+    printf(" ****************************************************************************************\n");
+    printf(" *                                  CONVERSAO NUMERICA                                  *\n");
+    printf(" ****************************************************************************************\n");
+
+    converter();
+
     printf(" ********************************************\n");
     printf("\n Pressione Enter para continuar ...");
+
+    fflush(stdin);
     getchar();
 }
+/** FIM CONVERSAO NUMERICA*/
+
+/** FUNCOES PARA SISTEMA LINEAR */
 void sistemaLinear() {
-    printf(" ********************************************\n");
-    printf(" *              SISTEMA LINERAR             *\n");
-    printf(" ********************************************\n");
+    /**
+     * Funcao cria matriz aumentada com a quantidade de variaveis informada
+     * Diagonaliza a mesma com o metodo de Jordan e imprime a matriz diagonal
+     * Se o SL for compativel, imprime o vetor de solucoes e se eh determinado ou indeterminado
+     * Caso contrario imprime que o SL eh Incompativel
+     */
+    int qtdVariaveis, tipo, *posicaoVariaveis;
+    double **matriz, *solucao;
+
+    printf(" Insira a quantidade de variaveis do SL: ");
+    fflush(stdin);
+    scanf("%d", &qtdVariaveis);
+    fflush(stdin);
+
+    // Criacao dos ponteiros e respectivas checagens
+    matriz = criaMatriz(qtdVariaveis, qtdVariaveis + 1);
+    if (matriz == NULL) { // Verificando se a matriz foi criada
+        printf(" ****************************************\n");
+        printf(" Erro por Falta de memoria!\n");
+        return;
+    }
+    solucao = malloc(sizeof(solucao) * qtdVariaveis);
+    if (solucao == NULL) { // Verificando se o vetor foi criado
+        printf(" ****************************************\n");
+        printf(" Erro por Falta de memoria!\n");
+        return;
+    }
+    posicaoVariaveis = malloc(sizeof(posicaoVariaveis) * qtdVariaveis);
+    if (posicaoVariaveis == NULL) { // Verificando se o vetor foi criado
+        printf(" ****************************************\n");
+        printf(" Erro por Falta de memoria!\n");
+        return;
+    }
+
+    preencheMatriz(matriz, qtdVariaveis, qtdVariaveis + 1); // Recebe o SL
+    jordan(matriz, posicaoVariaveis, qtdVariaveis); // Diagonaliza a matriz
+
+    printf("\n Matriz Diagonal Aumentada do SL:\n");
+    exibeMatriz(matriz, qtdVariaveis, qtdVariaveis + 1);
+
+    tipo = solucionaMatrizDiagonal(matriz, solucao, posicaoVariaveis, qtdVariaveis); // Tenta solucionar o SL
+    if (tipo != 2) { // Checa se o SL eh incompativel (nao possui solucao)
+        exibeVetor(solucao, qtdVariaveis);
+    }
+
+    printf("\n O SL eh ");
+    switch(tipo) {
+        case 0:
+            printf("Determinado\n");
+            break;
+        case 1:
+            printf("Indeterminado\n");
+            break;
+        default:
+            printf("Incompativel\n");
+            break;
+    }
+
+    // Limpando as alocacoes de ponteiros
+    for(int i = 0; i < qtdVariaveis; i++) { // Desalocando as linhas da matriz
+        free(matriz[i]);
+    }
+    free(matriz);
+    free(solucao);
+    free(posicaoVariaveis);
 }
-void equacaoAlgebrica() {
+
+void jordan(double** matriz, int* posicaoVariaveis, int n) {
+    /**
+     * Recebe a matriz aumentada (matriz) de um SL com (n) variaveis
+     * e aplica o metodo de Jordan para transforma-lo em um SL diagonal
+     */
+
+    int i, j, k;
+    double mult;
+
+    for (i = 0; i < n; i++) { // preenchendo o veor de posicoes com seus indices em ordem
+        posicaoVariaveis[i] = i;
+    }
+
+    for (i = 0; i <= n-1; i++) {
+        if (matriz[i][i] == 0) { // Pivo nulo
+            j = i+1;
+            while (j < n && matriz[i][j] == 0) {
+                j++;
+            }
+
+            if (j < n) { // Troca das colunas (i) e (j)
+                trocaColunas(matriz, posicaoVariaveis, n, i, j);
+            }
+        }
+        if (matriz[i][i] != 0) { // Caso o pivo ainda seja 0 (nao houve troca), toda a coluna sera igualada a 0
+            for (j = 0; j < n; j++) {
+                if (j != i) {
+                    mult = (-1) * matriz[j][i] / matriz[i][i];
+                    matriz[j][i] = 0;
+
+                    for (k = i+1; k <= n; k++) {
+                        matriz[j][k] += matriz[i][k] * mult;
+                    }
+                }
+            }
+        } else { // igualando toda a coluna [i] a 0
+            for (j = 0; j < n; j++) {
+                matriz[j][i] = 0;
+            }
+        }
+    }
+}
+
+void trocaColunas(double** matriz, int* posicaoVariaveis, int qtdVariaveis, int col1, int col2) {
+    /**
+     * metodo auxiliar para realizar a troca de colunas de uma matriz
+     * e organizar o vetor referente as posicoes das variaveis apos a troca
+     * recebe a matriz, o vetor das posicoes e as colunas que deverao ser trocadas
+     * retorna a matriz com as colunas trocadas e o vetor de posicoes organizado
+     */
+    int i, auxPosicao;
+    double auxTroca;
+
+    auxPosicao          = posicaoVariaveis[col1];
+    posicaoVariaveis[col1] = posicaoVariaveis[col2];
+    posicaoVariaveis[col2] = auxPosicao;
+
+    for (i = 0; i < qtdVariaveis; i++) {// loop nas linhas para trocar as colunas
+        auxTroca        = matriz[i][col1];
+        matriz[i][col1] = matriz[i][col2];
+        matriz[i][col2] = auxTroca;
+    }
+}
+
+int solucionaMatrizDiagonal(double** matriz, double* solucao, int* posicaoVariaveis, int qtdVariaveis) {
+    /**
+     * Recebe a matriz aumentada de um SL Diagonal com (qtdVariaveis) variaveis
+     * e o vetor com a posicao adequada das variaveis para envia-lo em ordem
+     * Se o SL:
+     * - For determinado, armazena em (solucao) a solucao do SL e devolve 0
+     * - For indeterminado armazena em (solucao) uma das Solucoes e devolve 1
+     * - For Incompativel, devolve 2
+     */
+
+     int i, tipo = 0;
+
+     for (i = qtdVariaveis-1; i >= 0; i--) {
+        if (matriz[i][i] == 0) {
+            if (matriz[i][qtdVariaveis] != 0) {
+                // multiplicação por 0 com resultado diferente de Zero
+                // Logo o SL é Incompativel
+                return 2;
+            }
+            solucao[posicaoVariaveis[i]] = 0; // atribui Zero a variavel ja na posicao correta
+            tipo = 1; // como qualquer valor de x multiplicado por 0 == 0, SL indeterminado
+        } else {
+            solucao[posicaoVariaveis[i]] = matriz[i][qtdVariaveis] / matriz[i][i];
+            if (fabs(solucao[posicaoVariaveis[i]]) < EPSILON) {
+                solucao[posicaoVariaveis[i]] = 0;
+            }
+        }
+     }
+     return tipo;
+}
+
+void menuSistemaLinear() {
+    printf(" ****************************************************************************************\n");
+    printf(" *                                    SISTEMA LINEAR                                    *\n");
+    printf(" ****************************************************************************************\n");
+
+    sistemaLinear();
+
     printf(" ********************************************\n");
-    printf(" *             EQUACAO ALGEBRICA            *\n");
+    printf("\n Pressione Enter para continuar ...");
+
+    fflush(stdin);
+    getchar();
+}
+
+/** FUNCOES PARA EQUACAO ALGEBRICA */
+void menuEquacaoAlgebrica() {
+    printf(" ****************************************************************************************\n");
+    printf(" *                                  EQUACAO ALGEBRICA                                   *\n");
+    printf(" ****************************************************************************************\n");
+
     printf(" ********************************************\n");
+    printf("\n Pressione Enter para continuar ...");
+
+    fflush(stdin);
+    getchar();
 }
 
 /** FUNCOES PARA MANIPULACAO DE MATRIZES E VETORES */
@@ -165,7 +421,7 @@ void preencheMatriz(double** mat, int lin, int col) {
     printf("\n");
     for (i = 0; i < lin; i++) {
         for (j = 0; j < col; j++) {
-            printf("m[%d][%d]: ", i+1, j+1);
+            printf(" m[%d][%d]: ", i+1, j+1);
             scanf("%lf", &mat[i][j]);
         }
     }
@@ -177,8 +433,8 @@ void exibeMatriz(double** mat, int lin, int col) {
      */
     int i, j;
 
-    printf("\nSua Matriz Aumentada:\n");
     for (i = 0; i < lin; i++) {
+        printf(" ");
         for (j = 0; j < col; j++) {
             printf("%10.3lf ", mat[i][j]);
         }
@@ -192,9 +448,9 @@ void exibeVetor(double* vet, int n) {
      */
     int i;
 
-    printf("\nSeu vetor de solucoes:\n");
+    printf("\n Seu vetor de solucoes:\n");
     for (i = 0; i < n; i++) {
-        printf("sol[%d] = %10.3lf;\n", i, vet[i]);
+        printf(" sol[%d] = %10.3lf;\n", i, vet[i]);
     }
 }
 
