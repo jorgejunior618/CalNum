@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <math.h>
 
-#define EPSILON 0.000001
+#define EPSILON 0.00000001
 #define MAX_CASAS_DECIMAIS 20
 
 void limpaTela();
@@ -29,7 +29,8 @@ void sistemaLinear();
 // Fim Equacao Algebrica
 
 // Funcoes gerais
-double** criaMatriz(double linhas, double colunas);
+double** criaMatriz(int linhas, int colunas);
+int** criaMatrizInteiros(int linhas, int colunas);
 void preencheMatriz(double** mat, int lin, int col);
 void exibeMatriz(double** mat, int lin, int col);
 void exibeVetor(double* vet, int n);
@@ -367,10 +368,220 @@ void menuSistemaLinear() {
 }
 
 /** FUNCOES PARA EQUACAO ALGEBRICA */
+
+void lerCoeficientes(int** coeficientes, int grauDaEquacao) {
+    /** recebe a matriz de coeficientes e atribui os valores lidos a equacao 0 [p(x)]
+     * depois calcula os coeficientes de:
+     * - p1(x) = x^n * p(1/x)
+     * - p2(x) = p(-x)
+     * - p3(x) = x^n * p(-1/x)
+     */
+    int valorRecebido, i, j;
+    for(int i = grauDaEquacao; i >= 0; --i) {
+        printf(" Insira o coeficiente de a[%d]: ", i);
+        scanf("%d", &valorRecebido);
+
+        //Verificando se an é maior que zero. Caso sim, repetir a mesma iteração.
+        if(i == grauDaEquacao && valorRecebido <= 0) {
+            printf(" a[%d] deve ser maior que zero.\n", grauDaEquacao);
+            ++i;
+        }
+        //Verificando se a0 é igual a zero. Caso sim, repetir a mesma iteração.
+        else if(i == 0 && valorRecebido == 0) {
+            printf(" a[0] deve ser diferente de zero.\n");
+            ++i;
+        }
+
+        // preenchendo as equacoes
+        coeficientes[0][i] = valorRecebido;
+        coeficientes[1][grauDaEquacao - i] = valorRecebido; // invertendo a ordem dos coeficientes
+        coeficientes[2][i] = i % 2 == 0 ? valorRecebido : valorRecebido * (-1); // fazendo p2(x) = p(-x), multiplicando os termos de ordem impar por (-1)
+        coeficientes[3][grauDaEquacao - i] = (grauDaEquacao - i) % 2 == 0 ? valorRecebido : valorRecebido * (-1); // invertendo os coeficientes e multiplicando os de ordem impar por (-1)
+    }
+
+    for (i = 0; i < 4; i++) {
+        if (coeficientes[i][grauDaEquacao] < 0) { // Se an < 0 multiplica todos os coeficientes por -1
+            for (j = grauDaEquacao; j > 0; j--) {
+                coeficientes[i][j] *= -1;
+            }
+            coeficientes[i][j] *= -1;
+        }
+    }
+}
+void calculaLimites(double limites[4], int** coeficientes, int grauEquacao) {
+/** Limites das raizes reais (rr) da equacao onde:
+ * - L0: limite superior das rr+
+ * - L1: limite inferior das rr+
+ * - L2: limite superior das rr-
+ * - L3: limite inferior das rr-
+ */
+    int k = 0, b = 0; // K: maior INDICE entre os coef. negativos; B: Modulo do Menor coef. negativo
+    int i, j;
+
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j <= grauEquacao; j++) {
+            if (coeficientes[i][j] < 0) {
+                k = j; // Selecionando o maior indice (aproveitando que o coeficiente a0 ja esta na posicao 0)
+                if (coeficientes[i][j] < b) { // Selecionando o menor coeficiente de cada equacao obtida
+                    b = coeficientes[i][j];
+                }
+            }
+        }
+
+        b *= -1;
+        if (b == 0) {
+            limites[i] = 0;
+        } else {
+            limites[i] = 1;
+            limites[i] += pow((b*1.0)/coeficientes[i][grauEquacao], 1.0/(grauEquacao - k));
+        }
+    }
+
+    if (limites[0] == 0) {
+        printf("\n * A equacao nao possui Raizes Reais Positivas\n");
+    } else {
+        printf("\n * As Raizes Reais Positivas da equacao estao no intervalo: [");
+        printf("%lf, %lf", 1/limites[1], limites[0]);
+        printf(" ]\n");
+    }
+
+
+    printf(" * As Raizes Reais Negativas da equacao estao no intervalo: [");
+    printf("%lf, %lf", (-1.0) * limites[2], (-1.0)/limites[3]);
+    printf(" ]\n");
+}
+
+double horner(double valorDeX,  int* coeficientes, int grauDaEquacao) {
+/** Calcula o valor da equacao de forma eficiente dado o valor de X no parametro
+ *  de acordo com o metodo de Horner
+ */
+    int i;
+    double resultado = coeficientes[grauDaEquacao];
+
+    for (i = grauDaEquacao - 1; i >= 0; i--) {
+        resultado = resultado * valorDeX + coeficientes[i];
+    }
+
+    return resultado;
+}
+
+int raizesImparBolzano(double limInferior, double limSuperior, int* coeficientes, int grauDaEquacao) {
+/** Calcula se dentro do intervalo ha uma quantidade impar de raizes
+ *  Em caso positivo retorna:
+ *  * 1 se o limite inferior for raiz
+ *  * 2 se o limite superior for raiz
+ *  * -1 se os limites nao forem raiz
+ *  Caso contrario retorna 0
+ */
+    double resultadoLimInferior ,resultadoLimSuperior;
+
+    resultadoLimInferior = horner(limInferior, coeficientes, grauDaEquacao);
+    resultadoLimSuperior = horner(limSuperior, coeficientes, grauDaEquacao);
+
+    if (resultadoLimInferior * resultadoLimSuperior <= 0) {
+        if (resultadoLimInferior == 0) {
+            return 1;
+        }
+        if (resultadoLimInferior == 0) {
+            return 2;
+        }
+        return -1;
+    }
+    return 0;
+}
+
+double bissecao(double limInferior, double limSuperior, int* coeficientes, int grauDaEquacao) {
+/** Utiliza o metodo de bissecao para calcular sucessivas aproximacoes para araiz da funcao
+ *  retorna o valor de X que torne a equacao mais proxima, ou exatamente igual, a 0
+ *  limitada a uma maximo de 1000 iteracoes ou margem de erro abaixo de 10^(-8)
+ */
+    double metadeIntervalo, erro, valorAtual;
+    int i = 0;
+
+    metadeIntervalo = (limInferior + limSuperior) / 2.0;
+    erro = (limInferior - limSuperior) / 2.0;
+    valorAtual = horner(limInferior, coeficientes, grauDaEquacao);
+
+    if (valorAtual > 0) { // convencao para realizar a atribuicao dos novos limites do intervalo
+        valorAtual = limInferior;
+        limInferior = limSuperior;
+        limSuperior = valorAtual;
+    }
+
+    while (fabs(erro) > EPSILON && i++ < 1000) { // itera ate um erro aceitavel ou um maximo de 1000 iteracoes
+        valorAtual = horner(metadeIntervalo, coeficientes, grauDaEquacao);
+        // Convencao de caso o valor obtido seja negativo, troca-se o limite inferior, caso contrario, troca-se o superior
+        if(valorAtual < 0) {
+            limInferior = metadeIntervalo;
+        } else if (valorAtual > 0) {
+            limSuperior = metadeIntervalo;
+        } else { // O valor da equacao eh exatamente igual a 0 (ZERO) para este valor
+            return metadeIntervalo;
+        }
+
+        // Atualizando o valor das variaveis para a proxima iteracao
+        metadeIntervalo = (limInferior + limSuperior) / 2;
+        erro = erro / 2;
+    }
+    printf("\n Na iteracao: ( %d ), com margem de erro: ( %.10lf ), eq = %.10lf\n", i, erro, valorAtual);
+    printf(" Metade Intervalo: ( %.10lf ), Inf: ( %.10lf ), Sup: ( %.10lf )\n", metadeIntervalo, limInferior, limSuperior);
+    return metadeIntervalo;
+}
+
+void solucaoEquacaoAlgebrica() {
+	int grauDaEquacao = 0,
+        **coeficientes, raizesImpar;
+        // Matriz onde a linha 0 representara a equacao digitada , e usada para calcular L0
+        // e as linhas 1 representa "p1" para calculo de L1, e assim por diante
+	double limites[4], limInferior, limSuperior, raizEquacao;
+        // Limites das raizes reais (rr) da equacao
+
+	printf(" Informe o grau da equacao: ");
+	scanf("%d", &grauDaEquacao);
+
+	// Serão disponibilizados grauDaEquacao + 1 blocos de memória do tamanho de um int,
+	// pois uma equação de grau n tem n+1 termos, considerando os termos nulos.
+	coeficientes = criaMatrizInteiros(4, grauDaEquacao + 1);
+	//malloc((grauDaEquacao + 1) * sizeof(coeficientes));
+
+	if(coeficientes == NULL) {
+		printf(" ****************************************\n");
+		printf(" Erro por Falta de memoria!\n");
+		return;
+	}
+    //Para simplificar o código, os coeficientes serão armazenados ao contrário no bloco de memória, ou seja, o termo an ficará no final do bloco e o termo a0 no início.
+    //Portanto, toda vez que for necessário iterar sobre os valores armazenados, deve-se utilizar como modelo o laço for imediatamente abaixo.
+    lerCoeficientes(coeficientes, grauDaEquacao);
+    calculaLimites(limites, coeficientes, grauDaEquacao);
+
+    printf(" Digite um intervalo para encontrar uma raiz da funcao:\n");
+    printf(" Inicio do Intervalo: ");
+    scanf("%lf", &limInferior);
+    printf(" Fim do Intervalo: ");
+    scanf("%lf", &limSuperior);
+
+    raizesImpar = raizesImparBolzano(limInferior, limSuperior, coeficientes[0], grauDaEquacao);
+    if(raizesImpar == 0) {
+        printf("\n A equacao possui um numero PAR de Raizes Reais no intervalo\n");
+    } else if (raizesImpar > 0) {
+        printf("\n Para X = %lf a equacao eh igual a 0 (ZERO)\n", raizesImpar == 1 ? limInferior : limSuperior);
+    } else {
+        raizEquacao = bissecao(limInferior, limSuperior, coeficientes[0], grauDaEquacao);
+        printf("\n Para X = %lf a equacao eh igual a 0 (ZERO)\n", raizEquacao);
+    }
+
+    for(int i = 0; i < 4; i++) { // Desalocando as linhas da matriz
+        free(coeficientes[i]);
+    }
+    free(coeficientes);
+}
+
 void menuEquacaoAlgebrica() {
     printf(" ****************************************************************************************\n");
     printf(" *                                  EQUACAO ALGEBRICA                                   *\n");
     printf(" ****************************************************************************************\n");
+
+    solucaoEquacaoAlgebrica();
 
     printf(" ********************************************\n");
     printf("\n Pressione Enter para continuar ...");
@@ -380,7 +591,7 @@ void menuEquacaoAlgebrica() {
 }
 
 /** FUNCOES PARA MANIPULACAO DE MATRIZES E VETORES */
-double** criaMatriz(double linhas, double colunas) {
+double** criaMatriz(int linhas, int colunas) {
     /** Se houver Memoria suficiente, cria uma matriz Double
      * com a qtd de linhas e de colunas fornecidas e devolve um ponteiro para a matriz,
      * caso contrario, devolve NULL
@@ -394,9 +605,41 @@ double** criaMatriz(double linhas, double colunas) {
         return NULL;
     }
 
-    for (i = 0; i< linhas; i++) {
+    for (i = 0; i < linhas; i++) {
         double *linha;
         linha = malloc(sizeof(double) * colunas);
+
+        if (linha == NULL) {
+            for(j = 0; j < i-1; j++) { // Limpando as linhas que ja foram criadas
+                free(matriz[j]);
+            }
+            free(matriz);
+            return NULL;
+        }
+
+        matriz[i] = linha;
+    }
+
+    return matriz;
+}
+
+int** criaMatrizInteiros(int linhas, int colunas) {
+    /** Se houver Memoria suficiente, cria uma matriz Double
+     * com a qtd de linhas e de colunas fornecidas e devolve um ponteiro para a matriz,
+     * caso contrario, devolve NULL
+     */
+
+    int i, j;
+    int **matriz;
+    matriz = malloc(sizeof(matriz) * linhas);
+
+    if (matriz == NULL) {
+        return NULL;
+    }
+
+    for (i = 0; i< linhas; i++) {
+        int *linha;
+        linha = malloc(sizeof(linha) * colunas);
 
         if (linha == NULL) {
             for(j = 0; j < i-1; j++) { // Limpando as linhas que ja foram criadas
