@@ -523,8 +523,7 @@ double bissecao(double limInferior, double limSuperior, int* coeficientes, int g
         metadeIntervalo = (limInferior + limSuperior) / 2;
         erro = erro / 2;
     }
-    printf("\n Na iteracao: ( %d ), com margem de erro: ( %.10lf ), eq = %.10lf\n", i, erro, valorAtual);
-    printf(" Metade Intervalo: ( %.10lf ), Inf: ( %.10lf ), Sup: ( %.10lf )\n", metadeIntervalo, limInferior, limSuperior);
+
     return metadeIntervalo;
 }
 
@@ -554,7 +553,7 @@ void solucaoEquacaoAlgebrica() {
     lerCoeficientes(coeficientes, grauDaEquacao);
     calculaLimites(limites, coeficientes, grauDaEquacao);
 
-    printf(" Digite um intervalo para encontrar uma raiz da funcao:\n");
+    printf("\n Digite um intervalo para encontrar uma raiz da funcao:\n");
     printf(" Inicio do Intervalo: ");
     scanf("%lf", &limInferior);
     printf(" Fim do Intervalo: ");
